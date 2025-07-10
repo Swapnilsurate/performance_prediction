@@ -1,17 +1,19 @@
-# predictor/views.py
-from django.shortcuts import render
-from .forms import StudentForm
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+import json
 from .predict_model import predict_pass_status
 
-def index(request):
-    result = None
+@csrf_exempt  # only for development, remove in production
+def predict_api(request):
     if request.method == "POST":
-        form = StudentForm(request.POST)
-        if form.is_valid():
-            math = form.cleaned_data["math"]
-            science = form.cleaned_data["science"]
-            english = form.cleaned_data["english"]
-            result = predict_pass_status(math, science, english)
-    else:
-        form = StudentForm()
-    return render(request, "predictor/index.html", {"form": form, "result": result})
+        print("Received POST") 
+        data = json.loads(request.body)
+        print("Data received:", data)
+        math = data.get("math")
+        science = data.get("science")
+        english = data.get("english")
+        if math is None or science is None or english is None:
+            return JsonResponse({"error": "All fields are required"}, status=400)
+        result = predict_pass_status(math, science, english)
+        return JsonResponse({"result": result})
+    return JsonResponse({"error": "Only POST method allowed"}, status=405)
